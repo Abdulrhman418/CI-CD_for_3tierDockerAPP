@@ -1,0 +1,72 @@
+version: "3.9"
+
+services:
+  web-tair:
+    build: ./web/
+    container_name: web
+    restart: always
+    ports:
+      - "8080:8080"
+    networks:
+      mynet-appTair:
+        ipv4_address: 10.0.1.2
+    environment:
+      API_HOST: ${API_HOST}
+    depends_on:
+      - api-tair
+
+  api-tair:
+    build: ./api/.
+    container_name: api
+    restart: always
+    ports:
+      - "5000:5000"
+    networks:
+      mynet-appTair:
+        ipv4_address: 10.0.1.10
+      mynet-backtair:
+        ipv4_address: 10.0.2.10
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_USER: ${DB_USER}
+      DB_NAME: ${DB_NAME}
+      DB_PASSWORD_FILE: /run/secrets/MYSQL_ROOT_PASSWORD
+    secrets:
+      - MYSQL_ROOT_PASSWORD
+
+  db-tair:
+    image: mysql:8
+    container_name: mydb
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/MYSQL_ROOT_PASSWORD
+      MYSQL_DATABASE: ${DB_NAME}
+    secrets:
+      - MYSQL_ROOT_PASSWORD
+    volumes:
+      - myvol:/var/lib/mysql
+    networks:
+      mynet-backtair:
+        ipv4_address: 10.0.2.20
+
+networks:
+  mynet-appTair:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.1.0/24
+          gateway: 10.0.1.1
+  mynet-backtair:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.2.0/24
+          gateway: 10.0.2.1
+
+volumes:
+  myvol:
+
+secrets:
+  MYSQL_ROOT_PASSWORD:
+    file: ./db-password.txt
+    external: false

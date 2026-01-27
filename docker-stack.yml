@@ -1,0 +1,171 @@
+version: "3.9"
+
+services:
+  web-tair:
+    image: stack/web:latest
+    ports:
+      - "8080:8080"
+    networks:
+      mynet-appTair:
+        ipv4_address: 10.0.1.2
+    environment:
+      API_HOST: ${API_HOST}
+    depends_on:
+      - api-tair
+
+    deploy:
+      replicas: 1
+      mode: replicated
+      placement:
+        constraints:
+          - node.role == manager
+      update_config:
+        parallelism: 2
+        delay: 5s
+        failure_action: rollback      # pause (stop update) and continue(continue with any occure)
+
+      rollback_config:           # return last version
+        parallelism: 1
+        delay: 5s
+
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+      resources:
+        limits:
+          cpus: ".5"
+          memory: 512M
+        reservations:
+          cpus: ".5"
+          memory: 256M
+
+      endpoint_mode: vip
+#------------------------------------------------------------------
+
+  api-tair:
+    image: stack/api:latest
+    ports:
+      - "5000:5000"
+    networks:
+      mynet-appTair:
+        ipv4_address: 10.0.1.10
+
+      mynet-backtair:
+        ipv4_address: 10.0.2.10
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_USER: ${DB_USER}
+      DB_NAME: ${DB_NAME}
+      DB_PASSWORD_FILE: /run/secrets/MYSQL_ROOT_PASSWORD
+    secrets:
+      - MYSQL_ROOT_PASSWORD
+    depends_on:
+      - db-tair
+
+
+    deploy:
+      replicas: 1
+      mode: replicated
+      placement:
+        constraints:
+          - node.role == manager
+      update_config:
+        parallelism: 2
+        delay: 5s
+        failure_action: rollback      # pause (stop update) and continue(continue with any occure)
+
+      rollback_config:           # return last version
+        parallelism: 1
+        delay: 5s
+
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+      resources:
+        limits:
+          cpus: ".5"
+          memory: 512M
+        reservations:
+          cpus: ".5"
+          memory: 256M
+
+      endpoint_mode: vip
+
+#--------------------------------------------------------------------
+
+  db-tair:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/MYSQL_ROOT_PASSWORD
+      MYSQL_DATABASE: ${DB_NAME}
+    secrets:
+      - MYSQL_ROOT_PASSWORD
+    volumes:
+      - myvol:/var/lib/mysql
+
+    networks:
+      mynet-backtair:
+        ipv4_address: 10.0.2.20
+
+    deploy:
+      replicas: 1
+      mode: replicated
+      placement:
+        constraints:
+          - node.role == manager
+      update_config:
+        parallelism: 2
+        delay: 5s
+        failure_action: rollback      # pause (stop update) and continue(continue with any occure)
+
+      rollback_config:           # return last version
+        parallelism: 1
+        delay: 5s
+
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+      resources:
+        limits:
+          cpus: ".5"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+
+      endpoint_mode: vip    #  dnsrr (dns round roupn)  note vip ctrea virtual ip and docker stak is resonsiple for load balanced (docker give ip for app and docker make load balanced)   dnsrr (docker give all ip of all node and app is decided use them)
+
+
+
+networks:
+  mynet-appTair:
+    driver: overlay
+    ipam:
+      config:
+        - subnet: 10.0.1.0/24
+
+  mynet-backtair:
+    driver: overlay
+    ipam:
+      config:
+        - subnet: 10.0.2.0/24
+
+#-----------------------------------------------------------------------------------------------------
+
+volumes:
+  myvol:
+
+#-------------------------------------------------------------------------------------------------------
+
+secrets:
+  MYSQL_ROOT_PASSWORD:
+    external: true
