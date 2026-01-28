@@ -26,8 +26,7 @@ jobs:
 
       - name: Run API tests
         run: |
-          cd api
-          pytest
+          pytest api/tests
 
       - name: Install Web dependencies
         run: |
@@ -36,8 +35,7 @@ jobs:
 
       - name: Run Web tests
         run: |
-          cd web
-          pytest
+          pytest web/tests
 
   build:
     runs-on: ubuntu-latest
