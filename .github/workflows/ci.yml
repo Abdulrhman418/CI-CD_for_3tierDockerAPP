@@ -66,6 +66,30 @@ jobs:
               run: |
                   docker stack deploy -c docker-stack.yml myapp
 
+            - name: Wait for MySQL to be ready
+              run: |
+                until docker exec $(docker ps -q -f name=myapp_db-tair) mysqladmin ping -uroot -p${{ secrets.MYSQL_ROOT_PASSWORD }} --silent; do
+                  echo "Waiting for MySQL..."
+                  sleep 2
+                done
+
+            - name: Create database and table
+              run: |
+                docker exec $(docker ps -q -f name=myapp_db-tair) mysql -h 127.0.0.1 -uroot -p${{ secrets.MYSQL_ROOT_PASSWORD }} -e "
+                CREATE DATABASE IF NOT EXISTS products_db;
+                USE products_db;
+                CREATE TABLE IF NOT EXISTS products (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    price DECIMAL(10,2) NOT NULL
+                );
+                SELECT * FROM products;"
+    
+            - name: Test API from web container
+              run: |
+                docker exec $(docker ps -q -f name=myapp_web-tair) sh -c "wget -qO- http://myapp_api-tair:5000/products" || exit 1
+
+ 
             - name: Push to DockerHub
               env:
                   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
