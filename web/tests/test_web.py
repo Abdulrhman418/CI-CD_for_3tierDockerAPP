@@ -16,10 +16,11 @@ def client():
 def test_home_page(monkeypatch):
     # Mock requests.get
     class DummyResponse:
+        def __init__(self):
+            self.status_code = 200  # Must have
         def json(self):
             return [{"id": 1, "name": "Test Product", "price": 10.0}]
 
-    # Fix: accept kwargs
     monkeypatch.setattr("requests.get", lambda url, **kwargs: DummyResponse())
 
     client = flask_app.test_client()
