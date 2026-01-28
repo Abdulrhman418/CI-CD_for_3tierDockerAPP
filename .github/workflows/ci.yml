@@ -22,23 +22,19 @@ jobs:
 
       - name: Install API dependencies
         run: |
-          cd api
-          pip install -r req.txt
+          pip install -r api/req.txt
 
       - name: Run API tests
         run: |
-          cd api
-          pytest
+          PYTHONPATH=api pytest api
 
       - name: Install Web dependencies
         run: |
-          cd web
-          pip install -r req.txt
+          pip install -r web/req.txt
 
       - name: Run Web tests
         run: |
-          cd web
-          pytest
+          PYTHONPATH=web pytest web
 
   build:
     runs-on: ubuntu-latest
@@ -69,13 +65,13 @@ jobs:
         run: |
           docker stack deploy -c docker-stack.yml myapp
       
-      - name: test docker services
+      - name: Test Docker services
         run: |
           sleep 60
           curl -f http://${{ secrets.API_HOST }}:5000/health || exit 1
           curl -f http://${{ secrets.API_HOST }}:8080/ || exit 1
 
-      - name: push to dockerhub
+      - name: Push to DockerHub
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -85,4 +81,3 @@ jobs:
           docker tag stack/web:latest $DOCKERHUB_USERNAME/stack-web:latest
           docker push $DOCKERHUB_USERNAME/stack-api:latest
           docker push $DOCKERHUB_USERNAME/stack-web:latest
-          
