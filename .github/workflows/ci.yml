@@ -83,7 +83,4 @@ jobs:
                   docker push $DOCKERHUB_USERNAME/stack-api:latest
                   docker push $DOCKERHUB_USERNAME/stack-web:latest
 
-
-                  
-
-                  
+                    
