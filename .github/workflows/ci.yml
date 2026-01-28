@@ -69,7 +69,7 @@ jobs:
             - name: Test Docker services
               run: |
                   sleep 30
-                  docker exec mysql_container mysql -u root -pPASSWORD -e "CREATE DATABASE IF NOT EXISTS products;"
+                  docker exec $(docker ps -q -f name=myapp_db-tair) mysql -uroot -p${{MYSQL_ROOT_PASSWORD}} -e "CREATE DATABASE IF NOT EXISTS products_db;"
                   docker exec $(docker ps -q -f name=myapp_web-tair) sh -c "wget -qO- http://myapp_api-tair:5000/products" || exit 1                  
                   curl -f http://${{ secrets.API_HOST }}:8080/ || exit 1
 
