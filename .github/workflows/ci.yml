@@ -75,7 +75,7 @@ jobs:
 
             - name: Create database and table
               run: |
-                docker exec $(docker ps -q -f name=myapp_db-tair) mysql -h myapp_db-tair -uroot -p${{ secrets.MYSQL_ROOT_PASSWORD }} -e "
+                docker exec $(docker ps -q -f name=myapp_db-tair) mysql -uroot -p${{ secrets.MYSQL_ROOT_PASSWORD }} -e "
                 CREATE DATABASE IF NOT EXISTS products_db;
                 USE products_db;
                 CREATE TABLE IF NOT EXISTS products (
