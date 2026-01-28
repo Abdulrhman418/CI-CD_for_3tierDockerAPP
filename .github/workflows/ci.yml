@@ -72,7 +72,7 @@ jobs:
                   docker service ls
                   docker secret ls
                   docker exec $(docker ps -q -f name=myapp_api-tair) sh -c "cat /run/secrets/MYSQL_ROOT_PASSWORD"
-                  docker exec $(docker ps -q -f name=myapp_db-tair) mysql -uroot -p${{secrets.MYSQL_ROOT_PASSWORD}} -e "CREATE DATABASE IF NOT EXISTS products_db; USE products_db; CREATE TABLE IF NOT EXISTS products ( id INT AUTO_INCREMENT PRIMARY KEY,  name VARCHAR(255) NOT NULL,  price DECIMAL(10,2) NOT NULL );"
+                  docker exec $(docker ps -q -f name=myapp_db-tair) mysql -uroot -p${{secrets.MYSQL_ROOT_PASSWORD}} -e "CREATE DATABASE IF NOT EXISTS products_db; USE products_db; CREATE TABLE IF NOT EXISTS products ( id INT AUTO_INCREMENT PRIMARY KEY,  name VARCHAR(255) NOT NULL,  price DECIMAL(10,2) NOT NULL ); SELECT * FROM products"
                   docker exec $(docker ps -q -f name=myapp_web-tair) sh -c "wget -qO- http://myapp_api-tair:5000/products" || exit 1                  
 
             - name: Push to DockerHub
