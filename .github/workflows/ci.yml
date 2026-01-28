@@ -60,7 +60,7 @@ jobs:
             - name: Create Docker secret
               run: |
                   echo "${{ secrets.MYSQL_ROOT_PASSWORD }}" | \
-                  docker secret create db_password - || true
+                  docker secret create MYSQL_ROOT_PASSWORD - || true
 
             - name: Deploy Docker Stack
               run: |
