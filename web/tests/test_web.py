@@ -27,5 +27,3 @@ def test_home_page(monkeypatch):
     rv = client.get("/")
     assert rv.status_code == 200
     assert "Test Product" in rv.get_data(as_text=True)
-
-
