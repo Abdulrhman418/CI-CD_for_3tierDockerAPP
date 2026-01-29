@@ -80,6 +80,20 @@ jobs:
                   echo "Waiting for Web..."
                   sleep 5
                 done
+
+            - name: Check if products table exists
+              run: |
+                TABLE_EXISTS=$(docker exec $(docker ps -q -f name=myapp_db-tair) \
+                mysql -uroot -p${{ secrets.MYSQL_ROOT_PASSWORD }} -D products_db -sse \
+                "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='products_db' AND table_name='products';")
+                if [ "$TABLE_EXISTS" -eq 1 ]; then
+                  echo "✅ Table 'products' exists. init.sql executed successfully."
+                else
+                  echo "❌ Table 'products' does NOT exist. init.sql may have failed."
+                  exit 1
+                fi
+
+
             - name: Integration test
               run: |
                 HOST_IP=$(hostname -I | awk '{print $1}')
