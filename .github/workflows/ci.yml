@@ -67,21 +67,24 @@ jobs:
                   docker stack deploy -c docker-stack.yml myapp
             - name: Wait for API to be ready
               run: |
-                until curl -sf http://localhost:5000/health; do
+                HOST_IP=$(hostname -I | awk '{print $1}')
+                until curl -sf http://$HOST_IP:5000/health; do
                   echo "Waiting for API..."
                   sleep 5
                 done
 
             - name: Wait for Web to be ready
               run: |
-                until curl -sf http://localhost:8080/; do
+                HOST_IP=$(hostname -I | awk '{print $1}')
+                until curl -sf http://$HOST_IP:8080/; do
                   echo "Waiting for Web..."
                   sleep 5
                 done
             - name: Integration test
               run: |
-                curl -f http://localhost:8080/ || exit 1
-                curl -f http://localhost:5000/products || exit 1                 
+                HOST_IP=$(hostname -I | awk '{print $1}')
+                curl -f http://$HOST_IP:8080/ || exit 1
+                curl -f http://$HOST_IP:5000/products || exit 1                 
 
             - name: Push to DockerHub
               env:
