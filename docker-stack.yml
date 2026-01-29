@@ -108,7 +108,6 @@ services:
       - MYSQL_ROOT_PASSWORD
     volumes:
       - myvol:/var/lib/mysql
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
     networks:
       mynet-backtair:
