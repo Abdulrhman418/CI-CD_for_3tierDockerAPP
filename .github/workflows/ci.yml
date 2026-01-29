@@ -65,6 +65,14 @@ jobs:
             - name: Deploy Docker Stack
               run: |
                   docker stack deploy -c docker-stack.yml myapp
+            
+            - name: Wait for MySQL to be ready
+              run: |
+                until docker exec $(docker ps -q -f name=myapp_db-tair) mysqladmin ping -uroot -p${{ secrets.MYSQL_ROOT_PASSWORD }} --silent; do
+                  echo "Waiting for MySQL..."
+                  sleep 5
+                done        
+              
             - name: Wait for API to be ready
               run: |
                 HOST_IP=$(hostname -I | awk '{print $1}')
@@ -81,19 +89,15 @@ jobs:
                   sleep 5
                 done
 
-            - name: Wait for MySQL to be ready
-              run: |
-                until docker exec $(docker ps -q -f name=myapp_db-tair) mysqladmin ping -uroot -p${{ secrets.MYSQL_ROOT_PASSWORD }} --silent; do
-                  echo "Waiting for MySQL..."
-                  sleep 5
-                done
-
             - name: Integration test
               run: |
                 HOST_IP=$(hostname -I | awk '{print $1}')
                 curl -f http://$HOST_IP:8080/ || exit 1
-                sleep 20 
-                curl -f http://$HOST_IP:5000/products || exit 1                 
+                HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}" http://$HOST_IP:5000/products)
+                if [ "$HTTP_STATUS" -ne 200 ]; then
+                  echo "API is not responding correctly"
+                  exit 1
+                fi               
 
             - name: Push to DockerHub
               env:
