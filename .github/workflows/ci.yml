@@ -96,9 +96,10 @@ jobs:
                   exit 1
                 fi
 
-                TABLE_EXISTS=$(docker exec $CONTAINER_ID \
-                mysql -uroot -p${{ secrets.MYSQL_ROOT_PASSWORD }} -D products_db -sse \
-                "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='products_db' AND table_name='products';")
+                TABLE_EXISTS=$(docker exec -i $CONTAINER_ID bash -c "
+                MYSQL_PWD=\$(cat /run/secrets/MYSQL_ROOT_PASSWORD) \
+                mysql -uroot -D products_db -sse \
+                \"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='products_db' AND table_name='products';\"")
     
                 if [ "$TABLE_EXISTS" -eq 1 ]; then
                   echo "✅ Table 'products' exists. init.sql executed successfully."
@@ -106,6 +107,7 @@ jobs:
                   echo "❌ Table 'products' does NOT exist. init.sql may have failed."
                   exit 1
                 fi
+
 
 
             - name: Integration test
