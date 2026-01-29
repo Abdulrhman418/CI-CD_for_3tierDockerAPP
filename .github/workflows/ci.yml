@@ -93,11 +93,8 @@ jobs:
               run: |
                 HOST_IP=$(hostname -I | awk '{print $1}')
                 curl -f http://$HOST_IP:8080/ || exit 1
-                HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}" http://$HOST_IP:5000/products)
-                if [ "$HTTP_STATUS" -ne 200 ]; then
-                  echo "API is not responding correctly"
-                  exit 1
-                fi               
+                sleep 20
+                curl -f http://$HOST_IP:5000/products || exit 1
 
             - name: Push to DockerHub
               env:
