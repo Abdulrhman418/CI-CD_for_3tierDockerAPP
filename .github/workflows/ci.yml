@@ -81,11 +81,25 @@ jobs:
                   sleep 5
                 done
 
+            - name: Wait for MySQL to be ready
+              run: |
+                until docker exec $(docker ps -q -f name=myapp_db-tair) mysqladmin ping -uroot -p${{ secrets.MYSQL_ROOT_PASSWORD }} --silent; do
+                  echo "Waiting for MySQL..."
+                  sleep 5
+                done
+
             - name: Check if products table exists
               run: |
-                TABLE_EXISTS=$(docker exec $(docker ps -q -f name=myapp_db-tair) \
+                CONTAINER_ID=$(docker ps -q -f name=myapp_db-tair)
+                if [ -z "$CONTAINER_ID" ]; then
+                  echo "❌ MySQL container not found"
+                  exit 1
+                fi
+
+                TABLE_EXISTS=$(docker exec $CONTAINER_ID \
                 mysql -uroot -p${{ secrets.MYSQL_ROOT_PASSWORD }} -D products_db -sse \
                 "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='products_db' AND table_name='products';")
+    
                 if [ "$TABLE_EXISTS" -eq 1 ]; then
                   echo "✅ Table 'products' exists. init.sql executed successfully."
                 else
