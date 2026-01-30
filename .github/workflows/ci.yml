@@ -36,6 +36,15 @@ jobs:
                   --cov=api \
                   --cov-report=xml --cov-report=html
 
+                  - name: Upload API test results
+                    uses: actions/upload-artifact@v3
+                    with:
+                      name: api-test-results
+                      path: |
+                        junit/api-test-results.xml
+                        coverage.xml
+                        htmlcov/
+
             - name: Install Web dependencies
               run: |
                   pip install -r web/req.txt
@@ -48,6 +57,14 @@ jobs:
                   --cov=web \
                   --cov-report=xml --cov-report=html
 
+            - name: Upload Web test results
+              uses: actions/upload-artifact@v3
+              with:
+                name: web-test-results
+                path: |
+                  junit/web-test-results.xml
+                  coverage.xml
+                  htmlcov/
     build:
         runs-on: ubuntu-latest
         needs: test
