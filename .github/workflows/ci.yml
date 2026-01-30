@@ -136,3 +136,4 @@ jobs:
                   docker tag stack/web:latest $DOCKERHUB_USERNAME/stack-web:latest
                   docker push $DOCKERHUB_USERNAME/stack-api:latest
                   docker push $DOCKERHUB_USERNAME/stack-web:latest
+ 
