@@ -1,4 +1,5 @@
 name: CI
+run-name: ${{ github.workflow }} #${{ github.run_number }} on ${{ github.ref }}
 
 on:
     pull_request:
