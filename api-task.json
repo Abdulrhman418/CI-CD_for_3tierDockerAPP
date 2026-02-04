@@ -7,20 +7,6 @@
   "cpu": "256",
   "memory": "512",
 
-  "_comment": {
-    "note": "In production, DB_PASSWORD is injected from AWS Secrets Manager.",
-    "prod_example": {
-      "secrets": [
-        {
-          "name": "DB_PASSWORD",
-          "valueFrom": "arn:aws:secretsmanager:us-east-1:032318239576:secret:DB_PASSWORD-qATXdu"
-        }
-      ]
-    },
-    "testing_note": "For development/testing only, a plain environment variable is used because the application does NOT handle JSON-formatted secrets yet.",
-    "warning": "THIS MUST NOT BE USED IN PRODUCTION"
-  },
-
   "containerDefinitions": [
     {
       "name": "api-tair",
