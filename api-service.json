@@ -1,0 +1,43 @@
+{
+  "cluster": "3tierapp",
+  "serviceName": "api-service",
+  "taskDefinition": "api-tier",
+  "desiredCount": 1,
+  "launchType": "FARGATE",
+  "platformVersion": "LATEST",
+  "enableExecuteCommand": true,
+
+  "serviceConnectConfiguration": {
+    "enabled": true,
+    "namespace": "arn:aws:servicediscovery:us-east-1:032318239576:namespace/ns-nje3w5pmsuoaqyjd",
+    "services": [
+      {
+        "portName": "api",
+        "discoveryName": "api",
+        "clientAliases": [
+          {
+            "port": 5000,
+            "dnsName": "api"
+          }
+        ]
+      }
+    ]
+  },
+
+  "networkConfiguration": {
+    "awsvpcConfiguration": {
+      "subnets": [
+        "subnet-037f8d91bae14e8e3"
+      ],
+      "securityGroups": [
+        "sg-0f4d152d0e63af243"
+      ],
+      "assignPublicIp": "DISABLED"
+    }
+  },
+
+  "deploymentConfiguration": {
+    "maximumPercent": 200,
+    "minimumHealthyPercent": 50
+  }
+}

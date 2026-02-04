@@ -1,0 +1,55 @@
+{
+  "family": "api-tair",
+  "taskRoleArn": "arn:aws:iam::032318239576:role/apiTaskRole",
+  "executionRoleArn": "arn:aws:iam::032318239576:role/ecsTaskExecutionRole",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+
+  "_comment": {
+    "note": "In production, DB_PASSWORD is injected from AWS Secrets Manager.",
+    "prod_example": {
+      "secrets": [
+        {
+          "name": "DB_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:032318239576:secret:DB_PASSWORD-qATXdu"
+        }
+      ]
+    },
+    "testing_note": "For development/testing only, a plain environment variable is used because the application does NOT handle JSON-formatted secrets yet.",
+    "warning": "THIS MUST NOT BE USED IN PRODUCTION"
+  },
+
+  "containerDefinitions": [
+    {
+      "name": "api-tair",
+      "image": "032318239576.dkr.ecr.us-east-1.amazonaws.com/api-tier:latest",
+
+      "portMappings": [
+        {
+          "containerPort": 5000,
+          "protocol": "tcp",
+          "name": "api"
+        }
+      ],
+
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/api-tier",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+
+      "environment": [
+        { "name": "DB_HOST", "value": "test-3tierapp.ci560iaky2gr.us-east-1.rds.amazonaws.com" },
+        { "name": "DB_USER", "value": "admin" },
+        { "name": "DB_NAME", "value": "products_db" },
+        { "name": "DB_PASSWORD", "value": "XSq#nITUBN3B4Ne_6tcwiqe-6cAl" }
+      ]
+    }
+  ]
+}
+

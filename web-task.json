@@ -1,0 +1,32 @@
+{
+  "family": "web-tair",
+  "taskRoleArn": "arn:aws:iam::032318239576:role/webtaskrole",
+  "executionRoleArn": "arn:aws:iam::032318239576:role/ecsTaskExecutionRole",
+  "networkMode": "awsvpc",
+  "containerDefinitions": [
+    {
+      "name": "web-tair",
+      "image": "032318239576.dkr.ecr.us-east-1.amazonaws.com/web-tier:latest",
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "logConfiguration": {
+       "logDriver": "awslogs",
+       "options": {
+          "awslogs-group": "/ecs/web-tier",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "environment": [
+        { "name": "API_HOST", "value": "api.3tierapp.local" } 
+      ]
+    }
+  ],
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512"
+}
