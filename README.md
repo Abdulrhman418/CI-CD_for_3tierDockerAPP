@@ -101,131 +101,171 @@ docker stack deploy -c docker-stack.yml myapp
 
 ## Overview
 
-This project demonstrates how to deploy a **3-tier application** on **AWS ECS Fargate** using **Service Connect**.  
-It consists of two main services:
+This guide explains step-by-step how to deploy a **3-tier application** on **AWS ECS Fargate** using **Service Connect**. It covers **initial setup**, **task and service definition preparation**, and **deployment steps** with AWS CLI commands.
 
-- **API Service** – Handles backend logic and database interactions.
-- **Web Service** – Serves the frontend and communicates with the API.
+The application consists of two main services:
 
-The setup ensures secure communication between services via ECS Service Connect, proper logging, and scalable deployment.
+- **API Service** – Backend service handling business logic.
+- **Web Service** – Frontend service communicating with the API.
 
----
-
-## Prerequisites
-
-Before deploying, ensure the following are in place:
-
-- AWS CLI configured with appropriate credentials.
-- Docker installed for building container images.
-- AWS VPC with subnets (public/private) and security groups.
-- IAM roles with necessary permissions for ECS tasks and execution.
-
-**Required IAM Roles:**
-
-1. **Task Role** – For container access to AWS resources (Secrets Manager, S3, etc.).
-2. **Execution Role** – For ECS agent to pull container images and send logs to CloudWatch.
-
-Other prerequisites:
-
-- CloudWatch log groups for API and Web services.
-- ECR repositories for storing Docker images.
+All communication between services uses **Service Connect**, and proper logging is configured with **CloudWatch**.
 
 ---
 
-## Architecture
+## Step 1: Initial Setup (SG, Log Groups, ECR, IAM Roles)
 
-       ┌────────────┐
-       │   Web UI   │
-       └─────┬──────┘
-             │
-      HTTP  │
-             ▼
-       ┌────────────┐
-       │   API      │
-       │  Service   │
-       └─────┬──────┘
-             │
-        Database / Other Services
+### 1.1 Create Security Groups
 
-- **Web Service** communicates with **API Service** using Service Connect DNS (`api`).
-- Both services run on **Fargate** with `awsvpc` networking mode.
-- Service Connect ensures secure service-to-service communication within the same VPC.
+- **API Security Group** allows inbound from Web SG on port 5000.
+- **Web Security Group** allows outbound traffic to API and internet.
+
+```bash
+aws ec2 create-security-group --group-name ecs-api-sg --description "API SG" --vpc-id <vpc-id>
+aws ec2 create-security-group --group-name ecs-web-sg --description "Web SG" --vpc-id <vpc-id>
+```
+
+### 1.2 Create CloudWatch Log Groups
+
+```bash
+aws logs create-log-group --log-group-name /ecs/api-tier
+aws logs create-log-group --log-group-name /ecs/web-tier
+```
+
+### 1.3 Push Docker Images to ECR
+
+Create repositories:
+
+```bash
+aws ecr create-repository --repository-name api-tier
+aws ecr create-repository --repository-name web-tier
+```
+
+Build and push images:
+
+```bash
+# API image
+docker build -t api-tier ./api
+docker tag api-tier:latest <account-id>.dkr.ecr.<region>.amazonaws.com/api-tier:latest
+aws ecr get-login-password --region <region> | docker login --username AWS --password-stdin <account-id>.dkr.ecr.<region>.amazonaws.com
+docker push <account-id>.dkr.ecr.<region>.amazonaws.com/api-tier:latest
+
+# Web image
+docker build -t web-tier ./web
+docker tag web-tier:latest <account-id>.dkr.ecr.<region>.amazonaws.com/web-tier:latest
+docker push <account-id>.dkr.ecr.<region>.amazonaws.com/web-tier:latest
+```
+
+### 1.4 Create IAM Roles
+
+**Task Roles** for API and Web, and **Execution Role** for ECS:
+
+```bash
+aws iam create-role --role-name apiTaskRole --assume-role-policy-document file://trust-policy.json
+aws iam create-role --role-name webTaskRole --assume-role-policy-document file://trust-policy.json
+aws iam create-role --role-name ecsTaskExecutionRole --assume-role-policy-document file://ecs-trust-policy.json
+aws iam attach-role-policy --role-name ecsTaskExecutionRole --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+```
 
 ---
 
-## Deployment Steps
+## Step 2: Prepare Task and Service Definition Files
 
-### 1. Build and Push Docker Images
+- Create **Task Definition JSON files** for API and Web, specifying:
+  - Container image and name
+  - Port mappings
+  - Environment variables
+  - CPU and memory
+  - Logging configuration
+  - Service Connect configuration (API as Client + Server, Web as Client only)
 
-- Build Docker images for API and Web services.
-- Push images to **Amazon ECR**.
+- Create **Service JSON files** for API and Web, specifying:
+  - Cluster: **`3tierapp`** (important: cluster name in ECS service file must match)
+  - Network configuration: subnets, security groups, assignPublicIp
+  - Enable ECS Exec
+  - Deployment configuration (min 50%, max 200%)
+  - Service Connect configuration
 
-### 2. Create ECS Cluster
+- Create **Private DNS Namespace** for Service Connect:
 
-- Create a cluster named `3tierapp`.
+```bash
+aws servicediscovery create-private-dns-namespace \
+  --name 3tierapp \
+  --vpc <vpc-id> \
+  --description "Private namespace for ECS Service Connect"
+```
 
-### 3. Set Up IAM Roles
+---
 
-- Create Task Roles for API and Web.
-- Create Execution Role and attach `AmazonECSTaskExecutionRolePolicy`.
+## Step 3: Deploy Using AWS CLI Commands
 
-### 4. Configure Network
+### 3.1 Create ECS Cluster
 
-- Create security groups:
-  - **API SG** allows inbound traffic from Web SG on port 5000.
-  - **Web SG** allows outbound traffic to API and internet.
-- Ensure subnets are available and configure NAT Gateway if using private subnets.
+```bash
+aws ecs create-cluster --cluster-name 3tierapp
+```
 
-### 5. Create CloudWatch Log Groups
+> **Note:** The cluster name must match the `cluster` field in your service definition files.
 
-- `/ecs/api-tier` for API logs.
-- `/ecs/web-tier` for Web logs.
+### 3.2 Register Task Definitions
 
-### 6. Register Task Definitions
+```bash
+aws ecs register-task-definition --cli-input-json file://api-task.json
+aws ecs register-task-definition --cli-input-json file://web-task.json
+```
 
-- Define containers, port mappings, environment variables, CPU, memory, logging, and Service Connect configuration.
-- Register API and Web task definitions in ECS.
+### 3.3 Create Services
 
-### 7. Service Discovery
+```bash
+aws ecs create-service --cli-input-json file://api-server.json
+aws ecs create-service --cli-input-json file://web-server.json
+```
 
-- Create a **Private DNS Namespace** for Service Connect.
-- Both services must use the same namespace to communicate.
+### 3.4 Verify Deployment
 
-### 8. Create ECS Services
+#### List Services
 
-- **API Service**: `Client + Server` Service Connect mode.
-- **Web Service**: `Client only` mode.
-- Enable ECS Exec and configure deployment settings.
+```bash
+aws ecs list-services --cluster 3tierapp
+```
 
-### 9. Verify Deployment
+#### Check Health and Status
 
-- List services in ECS cluster:
-
-  ```bash
-  aws ecs list-services --cluster 3tierapp
-
-Verify Services Health and Status
-
-Use this command to check the health and status of your services:
-
+```bash
 aws ecs describe-services --cluster 3tierapp --services api-service web-service
+```
 
-Test Service Connect DNS from Inside Web Container
+#### Test Service Connect DNS from Web Container
 
-Open an interactive shell inside the Web container:
-
+```bash
 aws ecs execute-command \
   --cluster 3tierapp \
   --task <WEB_TASK_ID> \
   --container web-tair \
   --interactive \
   --command "/bin/sh"
+```
 
+Inside the container:
 
-Inside the container, test connectivity to the API service:
-
-# Ping the API service
+```bash
 ping api
-
-# Test HTTP endpoint
 curl http://api:5000/products
+```
+
+---
+
+## Important Notes
+
+- Assign public IP only if using public subnets.
+- Ensure NAT Gateway exists if using private subnets.
+- Both services must use the same VPC and Service Connect namespace.
+- Monitor logs in CloudWatch for troubleshooting.
+
+---
+
+## References
+
+- [AWS ECS Fargate Documentation](https://docs.aws.amazon.com/ecs/latest/developerguide/what-is-fargate.html)  
+- [AWS Service Connect Guide](https://docs.aws.amazon.com/AmazonECS/latest/userguide/service-connect.html)  
+- [ECR Docker Image Push Guide](https://docs.aws.amazon.com/AmazonECR/latest/userguide/docker-push-ecr-image.html)
+
