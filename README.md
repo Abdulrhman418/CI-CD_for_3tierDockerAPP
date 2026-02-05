@@ -110,6 +110,8 @@ The application consists of two main services:
 
 All communication between services uses **Service Connect**, and proper logging is configured with **CloudWatch**.
 
+> **Note:** For this test application, the database password is passed as an environment variable directly in the task definition. In **production**, it is recommended to use **Secrets Manager** and reference secrets in the task definition for security. The simple test application used here does not handle the JSON format response returned by Secrets Manager, which prevents proper splitting and parsing, so using secrets was skipped to avoid redoing the image build and redeploying everything from scratch.
+
 ---
 
 ## Step 1: Initial Setup (SG, Log Groups, ECR, IAM Roles)
@@ -173,10 +175,12 @@ aws iam attach-role-policy --role-name ecsTaskExecutionRole --policy-arn arn:aws
 - Create **Task Definition JSON files** for API and Web, specifying:
   - Container image and name
   - Port mappings
-  - Environment variables
+  - Environment variables (**DB password is set directly here for testing**)
   - CPU and memory
   - Logging configuration
   - Service Connect configuration (API as Client + Server, Web as Client only)
+
+> **Note:** In production, you should reference secrets instead of passing the DB password directly. For this simple test application, using Secrets Manager would return a JSON format that the container cannot split or parse, so we skipped it to avoid rebuilding images and redeploying everything.
 
 - Create **Service JSON files** for API and Web, specifying:
   - Cluster: **`3tierapp`** (important: cluster name in ECS service file must match)
@@ -259,6 +263,8 @@ curl http://api:5000/products
 - Assign public IP only if using public subnets.
 - Ensure NAT Gateway exists if using private subnets.
 - Both services must use the same VPC and Service Connect namespace.
+- In testing, DB password is passed as environment variable. In production, use Secrets Manager.
+- The simple test application cannot handle JSON secrets; hence we skipped secret splitting to avoid rebuilding images.
 - Monitor logs in CloudWatch for troubleshooting.
 
 ---
