@@ -1,5 +1,5 @@
 {
-  "family": "api-tair",
+  "family": "api-tier",
   "taskRoleArn": "arn:aws:iam::032318239576:role/apiTaskRole",
   "executionRoleArn": "arn:aws:iam::032318239576:role/ecsTaskExecutionRole",
   "networkMode": "awsvpc",

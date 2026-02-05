@@ -17,7 +17,7 @@
         "clientAliases": [
           {
             "port": 5000,
-            "dnsName": "api"
+            "dnsName": "api.3tierapp"
           }
         ]
       }

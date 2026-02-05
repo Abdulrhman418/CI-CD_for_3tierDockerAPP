@@ -1,5 +1,5 @@
 {
-  "family": "web-tair",
+  "family": "web-tier",
   "taskRoleArn": "arn:aws:iam::032318239576:role/webtaskrole",
   "executionRoleArn": "arn:aws:iam::032318239576:role/ecsTaskExecutionRole",
   "networkMode": "awsvpc",
@@ -14,19 +14,24 @@
         }
       ],
       "logConfiguration": {
-       "logDriver": "awslogs",
-       "options": {
+        "logDriver": "awslogs",
+        "options": {
           "awslogs-group": "/ecs/web-tier",
           "awslogs-region": "us-east-1",
           "awslogs-stream-prefix": "ecs"
         }
       },
       "environment": [
-        { "name": "API_HOST", "value": "api.3tierapp.local" } 
+        {
+          "name": "API_HOST",
+          "value": "api.3tierapp"
+        }
       ]
     }
   ],
-  "requiresCompatibilities": ["FARGATE"],
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
   "cpu": "256",
   "memory": "512"
 }
