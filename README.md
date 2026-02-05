@@ -157,15 +157,45 @@ docker tag web-tier:latest <account-id>.dkr.ecr.<region>.amazonaws.com/web-tier:
 docker push <account-id>.dkr.ecr.<region>.amazonaws.com/web-tier:latest
 ```
 
-### 1.4 Create IAM Roles
+### 1.4 Create IAM Roles and Attach Policies
 
-**Task Roles** for API and Web, and **Execution Role** for ECS:
+**Execution Role** (ecsTaskExecutionRole) must have the following AWS managed policies:
+
+| Policy Name | Type | Attached Entities |
+|-------------|------|-----------------|
+| AmazonECSTaskExecutionRolePolicy | AWS managed | 1 |
+| CloudWatchLogsFullAccess | AWS managed | 1 |
+| SecretsManagerReadWrite | AWS managed | 1 |
+
+> **Reason:** Execution role needs permission to pull container images from ECR, send logs to CloudWatch, and read/write secrets if needed.
+
+**Web Task Role** (`webTaskRole`) must have:
+
+| Policy Name | Type | Attached Entities |
+|-------------|------|-----------------|
+| AmazonSSMManagedInstanceCore | AWS managed | 1 |
+
+> **Reason:** Needed to enable ECS Exec for debugging and interactive shell access inside the container.
+
+**API Task Role** (`apiTaskRole`) must have:
+
+| Policy Name | Type | Attached Entities |
+|-------------|------|-----------------|
+| AmazonSSMManagedInstanceCore | AWS managed | 2 |
+| SecretsManagerReadWrite | AWS managed | 1 |
+
+> **Reason:** API service needs to retrieve database password from Secrets Manager and optionally use ECS Exec for debugging.
 
 ```bash
 aws iam create-role --role-name apiTaskRole --assume-role-policy-document file://trust-policy.json
 aws iam create-role --role-name webTaskRole --assume-role-policy-document file://trust-policy.json
 aws iam create-role --role-name ecsTaskExecutionRole --assume-role-policy-document file://ecs-trust-policy.json
-aws iam attach-role-policy --role-name ecsTaskExecutionRole --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+aws iam attach-role-policy --role-name ecsTaskExecutionRole --policy-arn arn:aws:iam::aws:policy/AmazonECSTaskExecutionRolePolicy
+aws iam attach-role-policy --role-name ecsTaskExecutionRole --policy-arn arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+aws iam attach-role-policy --role-name ecsTaskExecutionRole --policy-arn arn:aws:iam::aws:policy/SecretsManagerReadWrite
+aws iam attach-role-policy --role-name webTaskRole --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+aws iam attach-role-policy --role-name apiTaskRole --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+aws iam attach-role-policy --role-name apiTaskRole --policy-arn arn:aws:iam::aws:policy/SecretsManagerReadWrite
 ```
 
 ---
@@ -179,8 +209,6 @@ aws iam attach-role-policy --role-name ecsTaskExecutionRole --policy-arn arn:aws
   - CPU and memory
   - Logging configuration
   - Service Connect configuration (API as Client + Server, Web as Client only)
-
-> **Note:** In production, you should reference secrets instead of passing the DB password directly. For this simple test application, using Secrets Manager would return a JSON format that the container cannot split or parse, so we skipped it to avoid rebuilding images and redeploying everything.
 
 - Create **Service JSON files** for API and Web, specifying:
   - Cluster: **`3tierapp`** (important: cluster name in ECS service file must match)
@@ -198,6 +226,8 @@ aws servicediscovery create-private-dns-namespace \
   --description "Private namespace for ECS Service Connect"
 ```
 
+> **Important:** When using these files, replace all placeholder values like ARN, account IDs, and VPC IDs with the actual resources you created.
+
 ---
 
 ## Step 3: Deploy Using AWS CLI Commands
@@ -208,7 +238,7 @@ aws servicediscovery create-private-dns-namespace \
 aws ecs create-cluster --cluster-name 3tierapp
 ```
 
-> **Note:** The cluster name must match the `cluster` field in your service definition files.
+> **Note:** Cluster name must match `cluster` field in your service JSON files.
 
 ### 3.2 Register Task Definitions
 
@@ -264,6 +294,8 @@ curl http://api:5000/products
 - Ensure NAT Gateway exists if using private subnets.
 - Both services must use the same VPC and Service Connect namespace.
 - In testing, DB password is passed as environment variable. In production, use Secrets Manager.
+- ECS Execution roles and Task roles must have correct policies attached as described above.
+- Replace all placeholder values in JSON files (ARNs, account IDs, VPC IDs, secret names) with the actual values created in your AWS account.
 - The simple test application cannot handle JSON secrets; hence we skipped secret splitting to avoid rebuilding images.
 - Monitor logs in CloudWatch for troubleshooting.
 
